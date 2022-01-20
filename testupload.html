@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <input id="fileinput" type="file" accept="text/html,.webarchive" />
+    <div><iframe id="iframe" width="100%" height="300"></iframe></div>
+    <div>
+        <textarea id="textarea" readonly style="width: 100%;" spellcheck="false"></textarea>
+    </div>
+    <script src="getHtmlFromWebarchive.js"></script>
+    <script src="deidentifyGoogleHtml.js"></script>
+    <script>
+        function replaceIframeContents(iframe, newContent) {
+            const iframeDoc = iframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(newContent);
+            iframeDoc.close();
+        }
+    </script>
+    <script>
+        const fileInput = document.getElementById("fileinput");
+        const previewFrame = document.getElementById("iframe");
+        replaceIframeContents(previewFrame, `<html><head></head><body>
+            <div style="font-family: sans-serif;color: grey">Preview will appear here</div>
+        </body></html>`);
+
+        fileInput.addEventListener("change", handleFileUploaded);
+
+        function handleFileUploaded() {
+            const file = fileInput.files[0];
+            const isWebarchive = file.name.endsWith(".webarchive");
+            const reader = new FileReader();
+            // Closure to capture the file information.
+            reader.addEventListener("load", () => {
+                const html = isWebarchive ? getHtmlFromWebarchive(reader.result) : reader.result;
+                if (!html.includes("<title>cheap housing - Google Search</title>")) {
+                    // Do something? Doesn't look valid.
+                    return;
+                }
+
+                const cleanedHtml = deidentifyGoogleHtml(html);
+                document.getElementById("textarea").value = cleanedHtml;
+                replaceIframeContents(previewFrame, cleanedHtml);
+            });
+
+            if (isWebarchive) {
+                reader.readAsArrayBuffer(file);
+            } else {
+                reader.readAsText(file);
+            }
+        }
+    </script>
+</body>
+</html>
